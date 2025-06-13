@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: 2977094657/BiliHistoryFrontend  # 替换成原仓库地址
-          ref: main  # 目标仓库的默认分支（如果是 master 也要改为 master）
+          ref: master  # 目标仓库的默认分支（如果是 master 也要改为 master）
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push to fork
