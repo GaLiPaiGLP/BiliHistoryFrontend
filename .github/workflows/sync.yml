@@ -1,0 +1,23 @@
+name: Sync Fork
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天同步一次（可以根据需要调整时间）
+  workflow_dispatch:    # 允许手动触发同步
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v3
+        with:
+          repository: 2977094657/BiliHistoryFrontend  # 替换成原仓库地址
+          ref: main  # 目标仓库的默认分支（如果是 master 也要改为 master）
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to fork
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main  # 推送到你的仓库
