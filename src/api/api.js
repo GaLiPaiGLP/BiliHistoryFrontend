@@ -89,15 +89,13 @@ export const getBiliHistory2024 = (page, size, sortOrder, tagName, mainCategory,
   })
 }
 
-export const searchBiliHistory2024 = (search, searchType = 'all', page = 1, size = 30, sortOrder = 0, sortBy = 'relevance', useLocalImages = false, useSessdata = true) => {
+export const searchBiliHistory2024 = (search, searchType = 'all', page = 1, size = 30, useLocalImages = false, useSessdata = true) => {
   return instance.get(`/history/search`, {
     params: {
       page,
       size,
       search,
       search_type: searchType,
-      sort_order: sortOrder,
-      sort_by: sortBy,
       use_local_images: useLocalImages,
       use_sessdata: useSessdata
     },
@@ -1257,26 +1255,6 @@ export const batchCheckFavoriteStatus = (params = {}) => {
 }
 
 /**
- * 批量修复失效的收藏视频
- * @param {Object} params 请求参数
- * @param {Array<number>} [params.video_ids] 视频av号列表
- * @param {number} [params.media_id] 收藏夹ID，指定时修复该收藏夹内的所有失效视频
- * @param {boolean} [params.repair_all] 是否修复所有收藏夹中的失效视频，默认为false
- * @param {Array<string>} [params.bvids] 视频BV号列表
- * @param {string} [params.sessdata] 用户的SESSDATA，不提供则从配置文件读取
- * @returns {Promise<Object>} 修复结果
- */
-export const repairFavoriteVideos = (params = {}) => {
-  // 确保video_ids字段始终存在，即使为空数组
-  const requestParams = { ...params };
-  if (!requestParams.video_ids) {
-    requestParams.video_ids = [];
-  }
-
-  return instance.post('/favorite/repair/batch', requestParams);
-}
-
-/**
  * 下载用户收藏夹视频
  * @param {Object} options 下载选项
  * @param {string} options.user_id 用户UID
@@ -1592,6 +1570,15 @@ export const getVideoDetailsStats = () => {
 }
 
 /**
+ * 获取失效视频明细
+ * @param {Object} params 可选过滤参数
+ * @returns {Promise<object>}
+ */
+export const getInvalidVideos = (params = {}) => {
+  return instance.get('/fetch/invalid-videos', { params })
+}
+
+/**
  * 停止视频详情获取任务
  * @returns {Promise<object>} - 包含停止结果的响应
  */
@@ -1672,4 +1659,86 @@ export const downloadCollection = async (params, onMessage) => {
     console.error('下载合集失败:', error)
     throw error
   }
+}
+
+// =============================
+// 动态相关接口（/dynamic）
+// =============================
+
+/**
+ * 列出数据库中已有动态的 UP 列表（含名称与头像）
+ * GET /dynamic/db/hosts
+ * @param {number} [limit=50] - 每页数量（1-200）
+ * @param {number} [offset=0] - 偏移量（>=0）
+ */
+export const getDynamicDbHosts = (limit = 50, offset = 0) => {
+  return instance.get('/dynamic/db/hosts', {
+    params: { limit, offset }
+  })
+}
+
+/**
+ * 列出指定 UP 的动态（来自数据库）
+ * GET /dynamic/db/space/{host_mid}
+ * @param {string|number} hostMid - UP 的 mid
+ * @param {number} [limit=20] - 每页数量（1-200）
+ * @param {number} [offset=0] - 偏移量（>=0）
+ */
+export const getDynamicDbSpace = (hostMid, limit = 20, offset = 0) => {
+  return instance.get(`/dynamic/db/space/${hostMid}`, {
+    params: { limit, offset }
+  })
+}
+/**
+ * 自动从上次位置继续抓取（页级延迟 3-5 秒，支持“页级停止”）
+ * GET /dynamic/space/auto/{host_mid}
+ * @param {string|number} hostMid - UP 的 mid
+ * @param {Object} params - 查询参数
+ * @param {boolean} [params.need_top=false]
+ * @param {boolean} [params.save_to_db=true]
+ * @param {boolean} [params.save_media=true]
+ */
+export const startDynamicAutoFetch = (hostMid, params = {}) => {
+  const {
+    need_top = false,
+    save_to_db = true,
+    save_media = true
+  } = params
+  return instance.get(`/dynamic/space/auto/${hostMid}`, {
+    params: { need_top, save_to_db, save_media }
+  })
+}
+
+/**
+ * 创建动态抓取进度的 SSE 连接
+ * GET /dynamic/space/auto/{host_mid}/progress
+ * @param {string|number} hostMid - UP 的 mid
+ * @returns {EventSource}
+ */
+export const createDynamicProgressSSE = (hostMid) => {
+  const baseUrl = instance.defaults.baseURL
+  const url = `${baseUrl}/dynamic/space/auto/${hostMid}/progress`
+  return new EventSource(url)
+}
+
+/**
+ * 发送停止信号（当前页抓取完成后停止并记录 offset）
+ * POST /dynamic/space/auto/{host_mid}/stop
+ * @param {string|number} hostMid - UP 的 mid
+ */
+export const stopDynamicAutoFetch = (hostMid) => {
+  return instance.post(`/dynamic/space/auto/${hostMid}/stop`)
+}
+// =============================
+// 动态删除接口（/dynamic）
+// =============================
+
+/**
+ * 清理指定 UP 的动态及媒体文件
+ * DELETE /dynamic/space/{host_mid}
+ * @param {string|number} hostMid - UP 的 mid
+ * @returns {Promise<any>}
+ */
+export const deleteDynamicSpace = (hostMid) => {
+  return instance.delete(`/dynamic/space/${hostMid}`)
 }
